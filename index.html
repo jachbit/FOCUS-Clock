@@ -67,7 +67,11 @@
   .city .name { color: var(--orange); margin-right: 8px; }
   .city .t { font-family: 'Roboto Mono', Consolas, monospace; }
   .city .off { color: var(--yellow); margin-left: 4px; font-size: 14px; }
+  .voice-row { display: flex; gap: 10px; align-items: center; justify-content: center; }
   #speak-note { font-size: 13px; font-weight: 700; color: #fff; }
+  .vbtn { background: transparent; color: #fff; border: 1px solid #fff; border-radius: 6px; padding: 2px 9px; font-size: 16px; cursor: pointer; line-height: 1.3; }
+  .vbtn:hover { background: rgba(255,255,255,0.1); }
+  .vbtn.on { border-color: var(--green); }
 
   /* ── Settings panel ── */
   #help table { border-collapse: collapse; width: 100%; }
@@ -108,6 +112,7 @@
   body.compact .city { font-size: max(12px, min(2.6vw, 4.6vh)); }
   body.compact .city .off { font-size: max(12px, min(1.8vw, 3.2vh)); }
   body.compact #holiday-note, body.compact #speak-note { font-size: max(12px, min(1.6vw, 3vh)); }
+  body.compact .vbtn { font-size: max(13px, min(1.9vw, 3.4vh)); }
   body.compact .world { max-width: none; gap: 0.4em 1.6em; }
   body.compact .footer { padding: 4px 12px; }
 
@@ -149,7 +154,7 @@
       <div id="hdr-date"></div>
     </div>
     <div class="hdr-buttons">
-      <button class="btn" id="btn-speak" title="Talking clock on / off">&#128266; Talk</button>
+      <button class="btn" id="btn-speak" title="Talking clock on / off (key V)">&#128266; Talk</button>
       <button class="btn" id="btn-compact" title="Compact: hide this header, the clock fills the window (key H)">&#9645; Compact</button>
       <button class="btn" id="btn-full" title="Full screen (key F)">&#9974; Full</button>
       <button class="btn" id="btn-settings" title="Settings">&#9881; Settings</button>
@@ -170,7 +175,7 @@
   </div>
   <div id="holiday-note"></div>
   <div class="world" id="world"></div>
-  <div id="speak-note"></div>
+  <div class="voice-row"><button class="vbtn" id="btn-voice" title="Talking clock on / off (key V)">&#128266;</button><span id="speak-note"></span></div>
 </main>
 
 <!-- ── Settings ── -->
@@ -204,7 +209,7 @@
         <button class="btn" id="btn-test">&#9654; Test</button>
       </div>
     </div>
-    <label class="check"><input type="checkbox" id="s-market"> Only during market hours (9:30-16:00 ET, trading days)</label>
+    <label class="check"><input type="checkbox" id="s-market"> Only during market hours (9:30-16:00 ET, trading days; off = all day)</label>
     <label class="check"><input type="checkbox" id="s-local"> Also say my local time (after Eastern)</label>
     <div class="grid2">
       <div class="field"><label for="s-voice">Voice</label><select id="s-voice"></select></div>
@@ -218,11 +223,12 @@
   <div class="panel">
     <h2>? Help <button class="btn" id="btn-help-close">&#10005; Close</button></h2>
     <table>
-      <tr><td>Getting started</td><td>Click or tap the page once: browsers only let a page speak after that. Turn the talking clock on with
-        &#128266; Talk (every 30 minutes) or in &#9881; Settings, and try &#9654; Test there.</td></tr>
+      <tr><td>Getting started</td><td>Click or tap the page once: browsers only let a page speak after that. The &#128266; / &#128263; icon under the
+        clock (also in compact mode) turns the voice on or off; the first time it starts at every 30 minutes. Interval, voice and speed: &#9881; Settings
+        (&#9654; Test there).</td></tr>
       <tr><td>Compact mode</td><td>&#9645; Compact or <kbd>H</kbd> hides the header and sizes the clock to the window: ideal for a small window in a
         corner of a big screen. Move the mouse over it for &#9776; Header (or press <kbd>H</kbd> again) to bring the header and Settings back.</td></tr>
-      <tr><td>Keys</td><td><kbd>H</kbd> compact on / off &nbsp;&#183;&nbsp; <kbd>F</kbd> full screen on / off &nbsp;&#183;&nbsp; <kbd>Esc</kbd> closes this panel and Settings
+      <tr><td>Keys</td><td><kbd>H</kbd> compact on / off &nbsp;&#183;&nbsp; <kbd>F</kbd> full screen on / off &nbsp;&#183;&nbsp; <kbd>V</kbd> voice on / off &nbsp;&#183;&nbsp; <kbd>Esc</kbd> closes this panel and Settings
         (and leaves full screen). In full screen the &#9974; Full button turns into &#8615; Min.</td></tr>
       <tr><td>Corner window</td><td>In Microsoft Edge: &#8943; &#8594; Apps &#8594; Install this site as an app. It opens in its own window with no address bar;
         drag it to a corner and size it.</td></tr>
@@ -276,11 +282,12 @@
 
   // ── settings, kept in this browser ──
   const KEY = 'focus-clock';
-  const DEF = { font: 'mono', size: 120, h12: false, date: true, session: true, zones: ['la', 'lon'], every: 0, market: true,
-    local: true, voice: null, rate: 1.05, talk: true, compact: false };
-  let S = { ...DEF };
-  try { S = { ...DEF, ...JSON.parse(localStorage.getItem(KEY) || '{}') }; } catch (e) { /* private window: defaults */ }
+  const DEF = { font: 'mono', size: 120, h12: false, date: true, session: true, zones: ['la', 'lon'], every: 0, market: false,
+    local: true, voice: null, rate: 1.05, talk: true, compact: false, v: 2 };
+  let S = { ...DEF }, saved = {};
+  try { saved = JSON.parse(localStorage.getItem(KEY) || '{}'); S = { ...DEF, ...saved }; } catch (e) { /* private window: defaults */ }
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { /* keep in memory only */ } };
+  if (saved.v !== 2 && Object.keys(saved).length) { S.market = false; S.v = 2; save(); }   // 2026-10-24: "only during market hours" now starts off
 
   const $ = id => document.getElementById(id);
   const fmt = (d, tz, opts) => new Intl.DateTimeFormat('en-US', { timeZone: tz, ...opts }).format(d);
@@ -415,8 +422,13 @@
       return `<span class="city" title="${label} (${tz})"><span class="name">${label}</span><span class="t">${fmt(now, tz, { hour: 'numeric', minute: '2-digit', hour12: S.h12 })}</span>${off ? `<span class="off">${off > 0 ? '+' + off : off}</span>` : ''}</span>`;
     }).join('');
 
-    $('speak-note').textContent = S.every && S.talk ? `Talking clock: every ${S.every} minutes${S.market ? ', market hours only' : ''}${S.local ? ', with your local time' : ''}` : '';
-    $('btn-speak').classList.toggle('on', S.talk && !!S.every);
+    const talking = S.talk && !!S.every;
+    $('speak-note').textContent = talking ? `Talking clock: every ${S.every} minutes${S.market ? ', market hours only' : ''}${S.local ? ', with your local time' : ''}` : 'Talking clock off';
+    $('btn-speak').classList.toggle('on', talking);
+    $('btn-speak').innerHTML = talking ? '&#128266; Talk' : '&#128263; Talk';
+    $('btn-voice').classList.toggle('on', talking);
+    $('btn-voice').innerHTML = talking ? '&#128266;' : '&#128263;';
+    $('btn-voice').title = talking ? 'Talking clock on: click to mute (key V)' : 'Talking clock off: click to turn it on (key V)';
     $('sound-banner').style.display = S.every && S.talk && !unlocked ? 'block' : 'none';
     maybeSpeak(now);
   }
@@ -465,12 +477,13 @@
   $('s-compact').onchange = e => { set({ compact: e.target.checked }); if (S.compact) $('settings').classList.remove('open'); };
   $('btn-compact').onclick = () => set({ compact: true });
   $('btn-compact-exit').onclick = () => set({ compact: false });
-  // H compact, F full screen, Esc closes the panels (not while typing in a field); the corner button shows while the mouse moves
+  // H compact, F full screen, V voice, Esc closes the panels (not while typing in a field); the corner button shows while the mouse moves
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape') { $('settings').classList.remove('open'); $('help').classList.remove('open'); return; }
     if (e.ctrlKey || e.altKey || e.metaKey || /^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName)) return;
     if (e.key === 'h' || e.key === 'H') set({ compact: !S.compact });
     else if (e.key === 'f' || e.key === 'F') toggleFull();
+    else if (e.key === 'v' || e.key === 'V') toggleVoice();
   });
   let hideBtn = null;
   document.addEventListener('mousemove', () => {
@@ -486,12 +499,14 @@
   $('btn-test').onclick = () => { unlocked = true; say(spokenTime(new Date())); };
   $('btn-add-zone').onclick = () => { const z = $('s-add-zone').value; if (z && S.zones.length < MAX_ZONES) set({ zones: [...S.zones, z] }); };
   $('s-zones').onclick = e => { const z = e.target.dataset && e.target.dataset.del; if (z) set({ zones: S.zones.filter(x => x !== z) }); };
-  $('btn-speak').onclick = () => {
+  const toggleVoice = () => {
     unlocked = true;
     if (!S.every) { set({ every: 30, talk: true }); say('Talking clock on, every 30 minutes'); return; }
     set({ talk: !S.talk });
-    if (S.talk) say('Talking clock on');
+    if (S.talk) say('Talking clock on'); else try { speechSynthesis.cancel(); } catch (e) { /* no speech engine */ }
   };
+  $('btn-speak').onclick = toggleVoice;
+  $('btn-voice').onclick = toggleVoice;
   const toggleFull = () => { if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen().catch(() => {}); };
   $('btn-full').onclick = toggleFull;
   // in full screen the button offers the way back (also after Esc / F11, which leave full screen without a click)
