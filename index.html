@@ -89,6 +89,24 @@
   .chip button { background: none; border: none; color: #fff; cursor: pointer; font-weight: 900; font-size: 12px; }
   #preview { font-size: 40px; color: #fff; font-weight: 700; }
 
+  /* ── Compact: no header, everything sized to the window (a small corner window on a big screen) ── */
+  #btn-compact-exit { position: fixed; top: 8px; right: 8px; z-index: 5; display: none; opacity: 0; transition: opacity .25s;
+    background: var(--navy); }
+  body.compact #btn-compact-exit { display: block; }
+  body.compact.mouse #btn-compact-exit { opacity: 1; }
+  body.compact .header { display: none; }
+  body.compact main { gap: min(1.6vh, 1.2vw); padding: 1vh 2vw; }
+  body.compact .clock { font-size: min(17vw, 34vh) !important; }
+  body.compact .clock .tz { font-size: max(12px, min(2.8vw, 5vh)); }
+  body.compact #date-line { font-size: max(12px, min(3vw, 5.5vh)); }
+  body.compact .sess { font-size: max(12px, min(2vw, 3.8vh)); padding: 0.2em 0.9em; }
+  body.compact .countdown { font-size: max(12px, min(2.2vw, 4vh)); }
+  body.compact .city { font-size: max(12px, min(2.6vw, 4.6vh)); }
+  body.compact .city .off { font-size: max(12px, min(1.8vw, 3.2vh)); }
+  body.compact #holiday-note, body.compact #speak-note { font-size: max(12px, min(1.6vw, 3vh)); }
+  body.compact .world { max-width: none; gap: 0.4em 1.6em; }
+  body.compact .footer { padding: 4px 12px; }
+
   /* ── Footer ── */
   .footer { background: #0a1628; border-top: 1px solid var(--border); text-align: center; padding: 10px 24px; font-size: 12px; color: #fff; }
 
@@ -125,11 +143,14 @@
     </div>
     <div class="hdr-buttons">
       <button class="btn" id="btn-speak" title="Talking clock on / off">&#128266; Talk</button>
+      <button class="btn" id="btn-compact" title="Compact: hide this header, the clock fills the window (key H)">&#9645; Compact</button>
       <button class="btn" id="btn-full" title="Full screen">&#9974; Full</button>
       <button class="btn" id="btn-settings" title="Settings">&#9881; Settings</button>
     </div>
   </div>
 </div>
+
+<button class="btn" id="btn-compact-exit" title="Show the header and Settings (key H)">&#9776; Header</button>
 
 <main>
   <div id="sound-banner" title="Browsers only let a page speak after you click it once">&#128266; Click anywhere to enable the talking clock</div>
@@ -161,6 +182,7 @@
     </div>
     <label class="check"><input type="checkbox" id="s-date"> Show the date (Wed, Oct 14, 2026)</label>
     <label class="check"><input type="checkbox" id="s-session"> Show the market session and countdown</label>
+    <label class="check"><input type="checkbox" id="s-compact"> Compact: hide the header, size everything to the window (key H)</label>
     <div class="field"><label>World clocks (New York is the main clock; up to 4 more)</label>
       <div class="row" id="s-zones"></div>
       <div class="row"><select id="s-add-zone" style="width:200px"></select><button class="btn" id="btn-add-zone">+ Add</button></div>
@@ -223,7 +245,7 @@
   // ── settings, kept in this browser ──
   const KEY = 'focus-clock';
   const DEF = { font: 'mono', size: 120, h12: false, date: true, session: true, zones: ['la', 'lon'], every: 0, market: true,
-    local: true, voice: null, rate: 1.05, talk: true };
+    local: true, voice: null, rate: 1.05, talk: true, compact: false };
   let S = { ...DEF };
   try { S = { ...DEF, ...JSON.parse(localStorage.getItem(KEY) || '{}') }; } catch (e) { /* private window: defaults */ }
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { /* keep in memory only */ } };
@@ -367,6 +389,7 @@
     maybeSpeak(now);
   }
   function applyLook() {
+    document.body.classList.toggle('compact', !!S.compact);
     const c = $('clock');
     c.style.fontFamily = (FONTS[S.font] || FONTS.mono)[1];
     c.style.fontSize = `min(${S.size}px, 15vw)`;
@@ -392,7 +415,7 @@
     $('s-size').innerHTML = SIZES.map(n => `<option value="${n}">${n} px${n === DEF.size ? ' (default)' : ''}</option>`).join('');
     $('s-size').value = S.size;
     document.querySelectorAll('[data-h12]').forEach(b => b.classList.toggle('on', (b.dataset.h12 === '1') === S.h12));
-    $('s-date').checked = S.date; $('s-session').checked = S.session;
+    $('s-date').checked = S.date; $('s-session').checked = S.session; $('s-compact').checked = !!S.compact;
     $('s-every').value = String(S.every); $('s-market').checked = S.market; $('s-local').checked = S.local;
     $('s-rate').value = S.rate; $('s-rate-val').textContent = `${Number(S.rate).toFixed(2)}x`;
     fillZones(); fillVoices();
@@ -407,6 +430,19 @@
   document.querySelectorAll('[data-h12]').forEach(b => { b.onclick = () => set({ h12: b.dataset.h12 === '1' }); });
   $('s-date').onchange = e => set({ date: e.target.checked });
   $('s-session').onchange = e => set({ session: e.target.checked });
+  $('s-compact').onchange = e => { set({ compact: e.target.checked }); if (S.compact) $('settings').classList.remove('open'); };
+  $('btn-compact').onclick = () => set({ compact: true });
+  $('btn-compact-exit').onclick = () => set({ compact: false });
+  // H: compact on / off (not while typing in a field); the corner button shows while the mouse moves over the clock
+  document.addEventListener('keydown', e => {
+    if ((e.key === 'h' || e.key === 'H') && !e.ctrlKey && !e.altKey && !e.metaKey && !/^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName)) set({ compact: !S.compact });
+  });
+  let hideBtn = null;
+  document.addEventListener('mousemove', () => {
+    document.body.classList.add('mouse');
+    clearTimeout(hideBtn);
+    hideBtn = setTimeout(() => document.body.classList.remove('mouse'), 2500);
+  });
   $('s-every').onchange = e => set({ every: Number(e.target.value), talk: true });
   $('s-market').onchange = e => set({ market: e.target.checked });
   $('s-local').onchange = e => set({ local: e.target.checked });
