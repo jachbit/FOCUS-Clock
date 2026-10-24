@@ -1,0 +1,16 @@
+# F.O.C.U.S. Talking Clock - no credentials are used, but the standard safety net stays (rule 7/9)
+.env
+*.token
+schwab_token.json
+tastytrade_token.json
+
+# timestamped / manual backups
+backups/
+*_backup_*
+*.bak
+
+# OS / editor junk
+Thumbs.db
+desktop.ini
+.DS_Store
+.vscode/
