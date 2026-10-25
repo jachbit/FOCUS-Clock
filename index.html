@@ -69,7 +69,7 @@
   .city .off { color: var(--yellow); margin-left: 4px; font-size: 14px; }
   .voice-row { display: flex; gap: 10px; align-items: center; justify-content: center; }
   #speak-note { font-size: 13px; font-weight: 700; color: #fff; }
-  .vbtn { background: transparent; color: #fff; border: 1px solid #fff; border-radius: 6px; padding: 2px 9px; font-size: 16px; cursor: pointer; line-height: 1.3; }
+  .vbtn { background: transparent; color: #fff; border: 1px solid #fff; border-radius: 6px; padding: 2px 9px; font-size: 16px; cursor: pointer; line-height: 1.3; white-space: nowrap; flex-shrink: 0; }
   .vbtn:hover { background: rgba(255,255,255,0.1); }
   .vbtn.on { border-color: var(--green); }
 
@@ -175,7 +175,7 @@
   </div>
   <div id="holiday-note"></div>
   <div class="world" id="world"></div>
-  <div class="voice-row"><button class="vbtn" id="btn-voice" title="Talking clock on / off (key V)">&#128266;</button><span id="speak-note"></span></div>
+  <div class="voice-row"><button class="vbtn" id="btn-swap" style="font-weight:800"></button><button class="vbtn" id="btn-voice" title="Talking clock on / off (key V)">&#128266;</button><span id="speak-note"></span></div>
 </main>
 
 <!-- ── Settings ── -->
@@ -231,7 +231,7 @@
         (&#9654; Test there).</td></tr>
       <tr><td>Compact mode</td><td>&#9645; Compact or <kbd>H</kbd> hides the header and sizes the clock to the window: ideal for a small window in a
         corner of a big screen. Move the mouse over it for &#9776; Header (or press <kbd>H</kbd> again) to bring the header and Settings back.</td></tr>
-      <tr><td>Keys</td><td><kbd>H</kbd> compact on / off &nbsp;&#183;&nbsp; <kbd>F</kbd> full screen on / off &nbsp;&#183;&nbsp; <kbd>V</kbd> voice on / off &nbsp;&#183;&nbsp; <kbd>Esc</kbd> closes this panel and Settings
+      <tr><td>Keys</td><td><kbd>H</kbd> compact on / off &nbsp;&#183;&nbsp; <kbd>F</kbd> full screen on / off &nbsp;&#183;&nbsp; <kbd>V</kbd> voice on / off &nbsp;&#183;&nbsp; <kbd>T</kbd> swap the main clock &nbsp;&#183;&nbsp; <kbd>Esc</kbd> closes this panel and Settings
         (and leaves full screen). In full screen the &#9974; Full button turns into &#8615; Min.</td></tr>
       <tr><td>Corner window</td><td>In Microsoft Edge: &#8943; &#8594; Apps &#8594; Install this site as an app. It opens in its own window with no address bar;
         drag it to a corner and size it.</td></tr>
@@ -245,7 +245,9 @@
       <tr><td>Main clock</td><td>Eastern (New York) by default. In &#9881; Settings &#8594; Main clock pick "My local time" (this device's zone, e.g.
         Pacific) or a city: the big clock and the date follow it, New York moves into the world clocks (first, not counted in the 4), and the
         talking clock leads with your zone ("It's 7:30 AM Pacific"; tick "Also say Eastern time" for "..., 10:30 AM Eastern"). The market
-        session, the countdown and "market hours only" always stay on New York time, and so does the small header clock.</td></tr>
+        session, the countdown and "market hours only" always stay on New York time, and so does the small header clock. Shortcut: the
+        &#8644; button under the clock (also in compact mode) or <kbd>T</kbd> swaps the main clock between New York and your other zone
+        (&#8644; PT / &#8644; ET); the other zone is your last non-Eastern choice in Settings, else your local time.</td></tr>
       <tr><td>World clocks</td><td>Up to 4 cities in &#9881; Settings (plus New York when the main clock is not Eastern); +1 / -1 when their date
         differs from the main clock.</td></tr>
       <tr><td>Privacy</td><td>No account and no tracking. Your settings stay in this browser, so each device keeps its own.</td></tr>
@@ -295,7 +297,7 @@
   // ── settings, kept in this browser ──
   const KEY = 'focus-clock';
   const DEF = { font: 'mono', size: 120, h12: false, date: true, session: true, zones: ['la', 'lon'], every: 0, market: false,
-    local: false, voice: null, rate: 1.05, talk: true, compact: false, v: 2, main: 'ny' };
+    local: false, voice: null, rate: 1.05, talk: true, compact: false, v: 2, main: 'ny', alt: null };
   let S = { ...DEF }, saved = {};
   try { saved = JSON.parse(localStorage.getItem(KEY) || '{}'); S = { ...DEF, ...saved }; } catch (e) { /* private window: defaults */ }
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { /* keep in memory only */ } };
@@ -309,6 +311,18 @@
     if (tz === ET) return 'ET';
     const n = (new Intl.DateTimeFormat('en-US', { timeZone: tz, timeZoneName: 'short' }).formatToParts(d).find(p => p.type === 'timeZoneName') || {}).value || '';
     return n.replace(/^([ECMP])[SD]T$/, '$1T');
+  }
+  // the swap's other side: the last non-Eastern main clock picked, else this device's zone, else the first world city off Eastern
+  function altKey() {
+    const ok = k => (k === 'local' ? HERE !== ET : !!CITIES[k] && CITIES[k][1] !== ET);
+    if (S.alt && ok(S.alt)) return S.alt;
+    if (HERE !== ET) return 'local';
+    return S.zones.find(ok) || 'la';
+  }
+  const keyTz = k => (k === 'local' ? HERE : CITIES[k] ? CITIES[k][1] : ET);
+  function keyLabel(k, d) {
+    const tz = keyTz(k), sh = zoneShort(tz, d);
+    return /^GMT/.test(sh) && CITIES[k] ? CITIES[k][0] : sh;
   }
   // what the voice calls a zone: Eastern, Pacific, Central... (a city's name when the zone has no plain name)
   function zoneSpoken(tz, d, city) {
@@ -456,6 +470,9 @@
       return `<span class="city" title="${label} (${tz})"><span class="name">${label}</span><span class="t">${fmt(now, tz, { hour: 'numeric', minute: '2-digit', hour12: S.h12 })}</span>${off ? `<span class="off">${off > 0 ? '+' + off : off}</span>` : ''}</span>`;
     }).join('');
 
+    const toEastern = main !== ET;
+    $('btn-swap').textContent = `\u21c4 ${toEastern ? 'ET' : keyLabel(altKey(), now)}`;
+    $('btn-swap').title = toEastern ? 'Main clock back to New York (Eastern) - key T' : `Main clock to ${keyLabel(altKey(), now)} - key T (the other side follows Settings > Main clock)`;
     const talking = S.talk && !!S.every;
     $('speak-note').textContent = talking ? `Talking clock: every ${S.every} minutes${S.market ? ', market hours only' : ''}${S.local && (main !== ET || HERE !== ET) ? (main === ET ? ', with your local time' : ', with Eastern time') : ''}` : 'Talking clock off';
     $('btn-speak').classList.toggle('on', talking);
@@ -517,18 +534,21 @@
   $('s-size').onchange = e => set({ size: Number(e.target.value) });
   document.querySelectorAll('[data-h12]').forEach(b => { b.onclick = () => set({ h12: b.dataset.h12 === '1' }); });
   $('s-date').onchange = e => set({ date: e.target.checked });
-  $('s-main').onchange = e => set({ main: e.target.value });
+  $('s-main').onchange = e => set({ main: e.target.value, alt: e.target.value !== 'ny' ? e.target.value : S.alt });
+  const swapMain = () => (mainTz() === ET ? set({ main: altKey() }) : set({ main: 'ny', alt: S.main }));
+  $('btn-swap').onclick = swapMain;
   $('s-session').onchange = e => set({ session: e.target.checked });
   $('s-compact').onchange = e => { set({ compact: e.target.checked }); if (S.compact) $('settings').classList.remove('open'); };
   $('btn-compact').onclick = () => set({ compact: true });
   $('btn-compact-exit').onclick = () => set({ compact: false });
-  // H compact, F full screen, V voice, Esc closes the panels (not while typing in a field); the corner button shows while the mouse moves
+  // H compact, F full screen, V voice, T swap the main clock, Esc closes the panels (not while typing in a field); the corner button shows while the mouse moves
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape') { $('settings').classList.remove('open'); $('help').classList.remove('open'); return; }
     if (e.ctrlKey || e.altKey || e.metaKey || /^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName)) return;
     if (e.key === 'h' || e.key === 'H') set({ compact: !S.compact });
     else if (e.key === 'f' || e.key === 'F') toggleFull();
     else if (e.key === 'v' || e.key === 'V') toggleVoice();
+    else if (e.key === 't' || e.key === 'T') swapMain();
   });
   let hideBtn = null;
   document.addEventListener('mousemove', () => {
