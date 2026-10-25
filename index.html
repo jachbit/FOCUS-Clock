@@ -232,8 +232,11 @@
         (and leaves full screen). In full screen the &#9974; Full button turns into &#8615; Min.</td></tr>
       <tr><td>Corner window</td><td>In Microsoft Edge: &#8943; &#8594; Apps &#8594; Install this site as an app. It opens in its own window with no address bar;
         drag it to a corner and size it.</td></tr>
-      <tr><td>Talking clock</td><td>"It's 10:30 AM Eastern, 7:30 AM Pacific": every 15, 30 or 60 minutes, during market hours only if you like, in the
-        voice and speed you pick (the voices installed on this device; Edge has the most natural ones).</td></tr>
+      <tr><td>Talking clock</td><td>"It's 10:30 AM Eastern": every 15, 30 or 60 minutes, all day or during market hours only, in the voice and speed
+        you pick (the voices installed on this device; Edge has the most natural ones).</td></tr>
+      <tr><td>Local time</td><td>Off by default. Tick &#9881; Settings &#8594; "Also say my local time" and it adds this device's own time zone after
+        Eastern: "It's 10:30 AM Eastern, 7:30 AM Pacific" (Central, Mountain, London... whatever the device is set to). On a device already on
+        Eastern time it says Eastern only, so it never repeats itself.</td></tr>
       <tr><td>Market session</td><td>NYSE hours in Eastern Time: pre-market 4:00, open 9:30, close 16:00, after hours until 20:00, with the
         countdown to the next change. Holidays and 1:00 PM early closes for 2026-2027 are built in.</td></tr>
       <tr><td>World clocks</td><td>Up to 4 cities next to New York in &#9881; Settings; +1 / -1 when their date differs.</td></tr>
@@ -283,7 +286,7 @@
   // ── settings, kept in this browser ──
   const KEY = 'focus-clock';
   const DEF = { font: 'mono', size: 120, h12: false, date: true, session: true, zones: ['la', 'lon'], every: 0, market: false,
-    local: true, voice: null, rate: 1.05, talk: true, compact: false, v: 2 };
+    local: false, voice: null, rate: 1.05, talk: true, compact: false, v: 2 };
   let S = { ...DEF }, saved = {};
   try { saved = JSON.parse(localStorage.getItem(KEY) || '{}'); S = { ...DEF, ...saved }; } catch (e) { /* private window: defaults */ }
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { /* keep in memory only */ } };
