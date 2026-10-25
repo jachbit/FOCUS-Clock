@@ -5,7 +5,8 @@
 ## What it does
 - **Eastern Time clock**: 24-hour or 12-hour, the date, six fonts (Roboto Mono, Orbitron digital, Share Tech Mono LCD, Consolas, Arial Black, Segoe UI) and sizes from 48 to 200 px. A full-screen button.
 - **Market session**: PRE-MARKET / MARKET OPEN / AFTER HOURS / CLOSED with a countdown to the next change (pre-market 4:00, open 9:30, close 16:00, after hours end 20:00 ET). NYSE holidays and 1:00 PM early closes for 2026-2027 are built in; add next year's in the `HOLIDAYS` / `EARLY_CLOSE` lists in `index.html`.
-- **World clocks**: up to 4 cities next to New York, with +1 / -1 when the day differs.
+- **Main clock**: Eastern (New York) by default, or your local time (e.g. Pacific, PT) or any world city (⚙ Settings → Main clock). The big clock and the date follow it, New York moves into the world clocks, and the voice leads with your zone. The market session, the countdown and "market hours only" stay on New York time, and so does the small header clock.
+- **World clocks**: up to 4 cities (plus New York when the main clock is not Eastern), with +1 / -1 when the day differs from the main clock.
 - **Compact mode** (▭ Compact, or the **H** key): hides the header and sizes the clock, date, session and world clocks to the window, so a small window in a corner of a big screen still shows the largest clock that fits. Move the mouse over it for the ☰ Header button (or press H again) to bring the header and Settings back. Remembered next time.
 - **Voice on / off**: the 🔊 / 🔇 icon under the clock (also in compact mode), the header 🔊 Talk button or the **V** key.
 - **Keys**: **H** compact on / off · **V** voice on / off · **F** full screen on / off (the ⛶ Full button turns into ↧ Min in full screen) · **Esc** closes Settings and Help. **? Help** explains it all on the page.
