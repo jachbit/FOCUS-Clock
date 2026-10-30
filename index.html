@@ -218,6 +218,10 @@
       <div class="field"><label for="s-voice">Voice</label><select id="s-voice"></select></div>
       <div class="field"><label for="s-rate">Speed <span id="s-rate-val"></span></label><input type="range" id="s-rate" min="0.7" max="1.5" step="0.05"></div>
     </div>
+    <div class="grid2">
+      <div class="field"><label for="s-vol">Volume <span id="s-vol-val"></span></label><input type="range" id="s-vol" min="0" max="1" step="0.05"
+        title="The voice's volume (100% = this device's own volume; it cannot go louder). Let go of the slider to hear it."></div>
+    </div>
   </div>
 </div>
 
@@ -235,8 +239,10 @@
         (and leaves full screen). In full screen the &#9974; Full button turns into &#8615; Min.</td></tr>
       <tr><td>Corner window</td><td>In Microsoft Edge: &#8943; &#8594; Apps &#8594; Install this site as an app. It opens in its own window with no address bar;
         drag it to a corner and size it.</td></tr>
-      <tr><td>Talking clock</td><td>"It's 10:30 AM Eastern": every 15, 30 or 60 minutes, all day or during market hours only, in the voice and speed
-        you pick (the voices installed on this device; Edge has the most natural ones).</td></tr>
+      <tr><td>Talking clock</td><td>"It's 10:30 AM Eastern": every 15, 30 or 60 minutes, all day or during market hours only, in the voice, speed
+        and volume you pick (the voices installed on this device; Edge has the most natural ones).</td></tr>
+      <tr><td>Volume</td><td>&#9881; Settings &#8594; Volume, 0-100%: the voice only (100% = this device's own volume, it cannot go louder than
+        that). Let go of the slider to hear the time at the new level.</td></tr>
       <tr><td>Local time</td><td>Off by default. Tick &#9881; Settings &#8594; "Also say my local time" and it adds this device's own time zone after
         Eastern: "It's 10:30 AM Eastern, 7:30 AM Pacific" (Central, Mountain, London... whatever the device is set to). On a device already on
         Eastern time it says Eastern only, so it never repeats itself.</td></tr>
@@ -297,7 +303,7 @@
   // ── settings, kept in this browser ──
   const KEY = 'focus-clock';
   const DEF = { font: 'mono', size: 120, h12: false, date: true, session: true, zones: ['la', 'lon'], every: 0, market: false,
-    local: false, voice: null, rate: 1.05, talk: true, compact: false, v: 2, main: 'ny', alt: null };
+    local: false, voice: null, rate: 1.05, vol: 1, talk: true, compact: false, v: 2, main: 'ny', alt: null };
   let S = { ...DEF }, saved = {};
   try { saved = JSON.parse(localStorage.getItem(KEY) || '{}'); S = { ...DEF, ...saved }; } catch (e) { /* private window: defaults */ }
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { /* keep in memory only */ } };
@@ -404,6 +410,7 @@
       const v = voices().find(x => x.voiceURI === S.voice);
       if (v) { u.voice = v; u.lang = v.lang; }
       u.rate = S.rate;
+      u.volume = Math.max(0, Math.min(1, Number(S.vol ?? 1)));
       speechSynthesis.speak(u);
     } catch (e) { /* no speech engine in this browser */ }
   }
@@ -523,6 +530,7 @@
     $('s-date').checked = S.date; $('s-session').checked = S.session; $('s-compact').checked = !!S.compact;
     $('s-every').value = String(S.every); $('s-market').checked = S.market; $('s-local').checked = S.local;
     $('s-rate').value = S.rate; $('s-rate-val').textContent = `${Number(S.rate).toFixed(2)}x`;
+    $('s-vol').value = S.vol ?? 1; $('s-vol-val').textContent = `${Math.round((S.vol ?? 1) * 100)}%`;
     fillZones(); fillVoices(); fillMain();
   }
   const set = p => { Object.assign(S, p); save(); applyLook(); fillSettings(); render(); };
@@ -561,6 +569,8 @@
   $('s-local').onchange = e => set({ local: e.target.checked });
   $('s-voice').onchange = e => set({ voice: e.target.value || null });
   $('s-rate').oninput = e => { S.rate = Number(e.target.value); save(); $('s-rate-val').textContent = `${S.rate.toFixed(2)}x`; };
+  $('s-vol').oninput = e => { S.vol = Number(e.target.value); save(); $('s-vol-val').textContent = `${Math.round(S.vol * 100)}%`; };
+  $('s-vol').onchange = () => { unlocked = true; say(spokenTime(new Date())); };   // let go of the slider: hear the new level
   $('btn-test').onclick = () => { unlocked = true; say(spokenTime(new Date())); };
   $('btn-add-zone').onclick = () => { const z = $('s-add-zone').value; if (z && S.zones.length < MAX_ZONES) set({ zones: [...S.zones, z] }); };
   $('s-zones').onclick = e => { const z = e.target.dataset && e.target.dataset.del; if (z) set({ zones: S.zones.filter(x => x !== z) }); };
