@@ -97,6 +97,23 @@
   .chip button { background: none; border: none; color: #fff; cursor: pointer; font-weight: 900; font-size: 12px; }
   #preview { font-size: 40px; color: #fff; font-weight: 700; }
 
+  /* ── Alarms ── */
+  #alarm-next { font-size: 14px; font-weight: 800; color: var(--yellow); cursor: pointer; }
+  #alarm-banner { display: none; position: fixed; inset: 0; z-index: 20; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; padding: 16px; }
+  #alarm-banner.open { display: flex; }
+  #alarm-banner .box { background: var(--card); border: 3px solid var(--yellow); border-radius: 12px; padding: 22px 26px; text-align: center;
+    display: flex; flex-direction: column; gap: 12px; max-width: 520px; width: 100%; animation: ring 1s ease-in-out infinite alternate; }
+  @keyframes ring { from { box-shadow: 0 0 0 0 rgba(251,191,36,0.6); } to { box-shadow: 0 0 28px 8px rgba(251,191,36,0.45); } }
+  #alarm-banner .t { font-size: 44px; font-weight: 800; color: #fff; font-family: 'Roboto Mono', Consolas, monospace; }
+  #alarm-banner .l { font-size: 20px; font-weight: 800; color: var(--yellow); }
+  .alarm-row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; border: 1px solid var(--border); border-radius: 8px; padding: 6px 8px; }
+  .alarm-row input[type=time], .alarm-row input[type=text] { background: var(--bg); color: #fff; border: 1px solid var(--border); border-radius: 6px;
+    padding: 5px 7px; font-size: 13px; font-weight: 700; }
+  .alarm-row input[type=text] { flex: 1; min-width: 120px; }
+  .alarm-row select { width: auto; }
+  .alarm-row .z { font-size: 12px; font-weight: 800; color: var(--orange); }
+  body.compact #alarm-next { font-size: max(12px, min(1.6vw, 3vh)); }
+
   /* ── Compact: no header, everything sized to the window (a small corner window on a big screen) ── */
   #btn-compact-exit { position: fixed; top: 8px; right: 8px; z-index: 5; display: none; opacity: 0; transition: opacity .25s;
     background: var(--navy); }
@@ -157,6 +174,7 @@
       <button class="btn" id="btn-speak" title="Talking clock on / off (key V)">&#128266; Talk</button>
       <button class="btn" id="btn-compact" title="Compact: hide this header, the clock fills the window (key H)">&#9645; Compact</button>
       <button class="btn" id="btn-full" title="Full screen (key F)">&#9974; Full</button>
+      <button class="btn" id="btn-alarms" title="Alarms (in Settings)">&#9200; Alarms</button>
       <button class="btn" id="btn-settings" title="Settings">&#9881; Settings</button>
       <button class="btn" id="btn-help" title="How the clock works">? Help</button>
     </div>
@@ -166,7 +184,7 @@
 <button class="btn" id="btn-compact-exit" title="Show the header and Settings (key H)">&#9776; Header</button>
 
 <main>
-  <div id="sound-banner" title="Browsers only let a page speak after you click it once">&#128266; Click anywhere to enable the talking clock</div>
+  <div id="sound-banner" title="Browsers only let a page make sound after you click it once">&#128266; Click anywhere to enable the talking clock and alarms</div>
   <div class="clock" id="clock"><span id="clock-time"></span><span class="tz" id="clock-tz">ET</span></div>
   <div id="date-line"></div>
   <div class="session-row" id="session-row">
@@ -175,8 +193,23 @@
   </div>
   <div id="holiday-note"></div>
   <div class="world" id="world"></div>
+  <div id="alarm-next"></div>
   <div class="voice-row"><button class="vbtn" id="btn-swap" style="font-weight:800"></button><button class="vbtn" id="btn-voice" title="Talking clock on / off (key V)">&#128266;</button><span id="speak-note"></span></div>
 </main>
+
+<!-- ── Alarm ringing ── -->
+<div id="alarm-banner">
+  <div class="box">
+    <div style="font-size:14px;font-weight:900;color:var(--orange);letter-spacing:1px">&#9200; F.O.C.U.S. ALARM</div>
+    <div class="t" id="alarm-time"></div>
+    <div class="l" id="alarm-label"></div>
+    <div class="row" style="justify-content:center">
+      <button class="btn" id="btn-snooze" title="Ring again in 5 minutes (key S)">&#128164; Snooze 5 min</button>
+      <button class="btn on" id="btn-dismiss" title="Stop the alarm (key Esc)">&#10003; Dismiss</button>
+    </div>
+    <div style="font-size:12px;font-weight:700;color:#fff">Rings every 30 seconds for up to 5 minutes &#183; <kbd style="border:1px solid #fff;border-radius:4px;padding:0 5px">S</kbd> snooze &#183; <kbd style="border:1px solid #fff;border-radius:4px;padding:0 5px">Esc</kbd> dismiss</div>
+  </div>
+</div>
 
 <!-- ── Settings ── -->
 <div id="settings">
@@ -222,6 +255,11 @@
       <div class="field"><label for="s-vol">Volume <span id="s-vol-val"></span></label><input type="range" id="s-vol" min="0" max="1" step="0.05"
         title="The voice's volume (100% = this device's own volume; it cannot go louder). Let go of the slider to hear it."></div>
     </div>
+    <div class="field" id="s-alarms-field"><label>&#9200; Alarms <span id="s-alarm-zone" style="color:#fff;text-transform:none"></span></label>
+      <div id="s-alarms" style="display:flex;flex-direction:column;gap:6px"></div>
+      <div class="row"><button class="btn" id="btn-add-alarm">+ Add alarm</button><button class="btn" id="btn-test-alarm">&#9654; Test the alarm</button></div>
+      <div style="font-size:12px;font-weight:700;color:#fff">The chime and the spoken label use the voice, speed and volume above. The page has to be open (a background tab is fine).</div>
+    </div>
   </div>
 </div>
 
@@ -235,12 +273,17 @@
         (&#9654; Test there).</td></tr>
       <tr><td>Compact mode</td><td>&#9645; Compact or <kbd>H</kbd> hides the header and sizes the clock to the window: ideal for a small window in a
         corner of a big screen. Move the mouse over it for &#9776; Header (or press <kbd>H</kbd> again) to bring the header and Settings back.</td></tr>
-      <tr><td>Keys</td><td><kbd>H</kbd> compact on / off &nbsp;&#183;&nbsp; <kbd>F</kbd> full screen on / off &nbsp;&#183;&nbsp; <kbd>V</kbd> voice on / off &nbsp;&#183;&nbsp; <kbd>T</kbd> swap the main clock &nbsp;&#183;&nbsp; <kbd>Esc</kbd> closes this panel and Settings
+      <tr><td>Keys</td><td><kbd>H</kbd> compact on / off &nbsp;&#183;&nbsp; <kbd>F</kbd> full screen on / off &nbsp;&#183;&nbsp; <kbd>V</kbd> voice on / off &nbsp;&#183;&nbsp; <kbd>T</kbd> swap the main clock &nbsp;&#183;&nbsp; <kbd>S</kbd> snooze a ringing alarm &nbsp;&#183;&nbsp; <kbd>Esc</kbd> dismisses a ringing alarm, closes this panel and Settings
         (and leaves full screen). In full screen the &#9974; Full button turns into &#8615; Min.</td></tr>
       <tr><td>Corner window</td><td>In Microsoft Edge: &#8943; &#8594; Apps &#8594; Install this site as an app. It opens in its own window with no address bar;
         drag it to a corner and size it.</td></tr>
       <tr><td>Talking clock</td><td>"It's 10:30 AM Eastern": every 15, 30 or 60 minutes, all day or during market hours only, in the voice, speed
         and volume you pick (the voices installed on this device; Edge has the most natural ones).</td></tr>
+      <tr><td>Alarms</td><td>&#9200; Alarms (or &#9881; Settings &#8594; Alarms): + Add alarm, then the time, a label ("Pre-market check") and
+        Repeat: Once, Every day, Weekdays, or Market days (NYSE trading days: holidays skipped). The time is in the main clock's zone when you add
+        it (shown next to it, e.g. ET). When it rings: a chime and the voice ("F.O.C.U.S. alarm, 9:25. Pre-market check"), every 30 seconds for up to
+        5 minutes, with &#128164; Snooze 5 min (<kbd>S</kbd>) and &#10003; Dismiss (<kbd>Esc</kbd>). The next alarm shows under the clock. The page
+        has to be open (a background tab is fine; a closed browser or a sleeping phone cannot ring).</td></tr>
       <tr><td>Volume</td><td>&#9881; Settings &#8594; Volume, 0-100%: the voice only (100% = this device's own volume, it cannot go louder than
         that). Let go of the slider to hear the time at the new level.</td></tr>
       <tr><td>Local time</td><td>Off by default. Tick &#9881; Settings &#8594; "Also say my local time" and it adds this device's own time zone after
@@ -303,7 +346,7 @@
   // ── settings, kept in this browser ──
   const KEY = 'focus-clock';
   const DEF = { font: 'mono', size: 120, h12: false, date: true, session: true, zones: ['la', 'lon'], every: 0, market: false,
-    local: false, voice: null, rate: 1.05, vol: 1, talk: true, compact: false, v: 2, main: 'ny', alt: null };
+    local: false, voice: null, rate: 1.05, vol: 1, talk: true, compact: false, v: 2, main: 'ny', alt: null, alarms: [] };
   let S = { ...DEF }, saved = {};
   try { saved = JSON.parse(localStorage.getItem(KEY) || '{}'); S = { ...DEF, ...saved }; } catch (e) { /* private window: defaults */ }
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { /* keep in memory only */ } };
@@ -354,6 +397,16 @@
       const p = partsIn(new Date(t), ET);
       const asUtc = Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour % 24, +p.minute);
       t += Date.UTC(y, mo - 1, dd, h, m) - asUtc;
+    }
+    return t;
+  }
+  // wall-clock time in any zone -> epoch ms (two passes so a daylight-saving day lands right)
+  function tzToEpoch(iso, h, m, tz) {
+    const [y, mo, dd] = iso.split('-').map(Number);
+    let t = Date.UTC(y, mo - 1, dd, h, m);
+    for (let i = 0; i < 2; i++) {
+      const p = partsIn(new Date(t), tz);
+      t += Date.UTC(y, mo - 1, dd, h, m) - Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour % 24, +p.minute);
     }
     return t;
   }
@@ -425,6 +478,87 @@
     if (second === main) return first;
     return `${first}, ${t(second)} ${zoneSpoken(second, d, null)}`;
   }
+  // ── alarms (2026-11-05): each keeps the zone it was set in; Once / Every day / Weekdays / Market days (NYSE) ──
+  let actx = null;
+  function chime() {
+    try {
+      actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+      if (actx.state !== 'running') actx.resume();
+      const vol = Math.max(0, Math.min(1, Number(S.vol ?? 1))) * 0.35, t0 = actx.currentTime;
+      [880, 1175, 1568].forEach((f, i) => {
+        const o = actx.createOscillator(), g = actx.createGain(), st = t0 + i * 0.22;
+        o.type = 'triangle'; o.frequency.value = f;
+        g.gain.setValueAtTime(0, st); g.gain.linearRampToValueAtTime(vol, st + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, st + 0.5);
+        o.connect(g).connect(actx.destination); o.start(st); o.stop(st + 0.55);
+      });
+    } catch (e) { /* no audio in this browser */ }
+  }
+  const REPEATS = { once: 'Once', daily: 'Every day', weekdays: 'Weekdays', market: 'Market days' };
+  const alarmTz = a => keyTz(a.zone || 'ny');
+  const alarmZoneLabel = a => keyLabel(a.zone || 'ny', new Date());
+  const spokenClock = (h, m) => { const d = new Date(Date.UTC(2000, 0, 1, h, m)); return fmt(d, 'UTC', { hour: 'numeric', minute: '2-digit', hour12: true }).replace(':00 ', ' '); };
+  // does the alarm ring on this date (its own zone's date)?
+  function ringsOn(a, iso) {
+    if (a.repeat === 'weekdays') { const w = new Date(iso + 'T12:00:00Z').getUTCDay(); return w > 0 && w < 6; }
+    if (a.repeat === 'market') return tradingDay(iso);
+    return true;
+  }
+  // the next time it rings (epoch ms), within 10 days
+  function nextRing(a, now) {
+    const tz = alarmTz(a), [h, m] = a.time.split(':').map(Number);
+    for (let k = 0; k < 10; k++) {
+      const iso = isoIn(new Date(now + k * 86400000), tz);
+      if (!ringsOn(a, iso)) continue;
+      const t = tzToEpoch(iso, h, m, tz);
+      if (t > now) return t;
+    }
+    return null;
+  }
+  const fired = {};            // alarm id -> the date it last rang (so a minute rings once)
+  let ringing = null, snooze = null;
+  function ring(a, at) {
+    ringing = { a, start: Date.now(), last: 0 };
+    $('alarm-time').textContent = `${a.time} ${alarmZoneLabel(a)}`;
+    $('alarm-label').textContent = a.label || 'Alarm';
+    $('alarm-banner').classList.add('open');
+    ringTick();
+  }
+  function ringTick() {
+    if (!ringing) return;
+    const now = Date.now();
+    if (now - ringing.start > 5 * 60000) { stopRing(); return; }
+    if (now - ringing.last < 30000) return;
+    ringing.last = now;
+    chime();
+    const [h, m] = ringing.a.time.split(':').map(Number);
+    setTimeout(() => say(`F.O.C.U.S. alarm, ${spokenClock(h, m)}. ${ringing ? ringing.a.label || '' : ''}`), 900);
+  }
+  function stopRing() { ringing = null; $('alarm-banner').classList.remove('open'); try { speechSynthesis.cancel(); } catch (e) { /* none */ } }
+  function snoozeRing() { if (!ringing) return; snooze = { a: ringing.a, at: Date.now() + 5 * 60000 }; stopRing(); render(); }
+  function checkAlarms(now) {
+    if (ringing) { ringTick(); return; }
+    if (snooze && now.getTime() >= snooze.at) { const a = snooze.a; snooze = null; ring(a); return; }
+    for (const a of S.alarms || []) {
+      if (!a.on || !/^\d\d:\d\d$/.test(a.time || '')) continue;
+      const tz = alarmTz(a), p = partsIn(now, tz), iso = isoIn(now, tz);
+      if (`${String(+p.hour % 24).padStart(2, '0')}:${p.minute}` !== a.time || fired[a.id] === iso || !ringsOn(a, iso)) continue;
+      fired[a.id] = iso;
+      if (a.repeat === 'once') { a.on = false; save(); fillAlarms(); }
+      ring(a);
+      return;
+    }
+  }
+  // "2h 14m" / "14m" / "40s"
+  const inWords = ms => { const s = Math.max(0, Math.round(ms / 1000)), d = Math.floor(s / 86400), h = Math.floor(s % 86400 / 3600), m = Math.floor(s % 3600 / 60);
+    return d ? `${d}d ${h}h` : h ? `${h}h ${m}m` : m ? `${m}m` : `${s}s`; };
+  function alarmBadge(now) {
+    if (snooze) return `\u23f0 Snoozed: ${snooze.a.label || 'alarm'} again in ${inWords(snooze.at - now)} (click to cancel)`;
+    let best = null;
+    for (const a of S.alarms || []) { if (!a.on) continue; const t = nextRing(a, now); if (t && (!best || t < best.t)) best = { a, t }; }
+    if (!best) return '';
+    return `\u23f0 ${best.a.time} ${alarmZoneLabel(best.a)}${best.a.label ? ' ' + best.a.label : ''} (in ${inWords(best.t - now)})`;
+  }
+
   let lastSaid = '';
   function maybeSpeak(now) {
     if (!S.every || !S.talk) return;
@@ -487,8 +621,12 @@
     $('btn-voice').classList.toggle('on', talking);
     $('btn-voice').innerHTML = talking ? '&#128266;' : '&#128263;';
     $('btn-voice').title = talking ? 'Talking clock on: click to mute (key V)' : 'Talking clock off: click to turn it on (key V)';
-    $('sound-banner').style.display = S.every && S.talk && !unlocked ? 'block' : 'none';
+    const hasAlarm = (S.alarms || []).some(a => a.on);
+    $('sound-banner').style.display = ((S.every && S.talk) || hasAlarm) && !unlocked ? 'block' : 'none';
+    $('alarm-next').textContent = alarmBadge(now.getTime());
+    $('alarm-next').style.display = $('alarm-next').textContent ? '' : 'none';
     maybeSpeak(now);
+    checkAlarms(now);
   }
   function applyLook() {
     document.body.classList.toggle('compact', !!S.compact);
@@ -521,6 +659,17 @@
     $('s-zones-label').textContent = eastern ? 'World clocks (New York is the main clock; up to 4 more)' : 'World clocks (New York shows first; up to 4 more)';
     $('s-local-label').textContent = eastern ? 'Also say my local time (after Eastern)' : 'Also say Eastern time (after the main clock)';
   }
+  function fillAlarms() {
+    const zl = keyLabel(S.main, new Date());
+    $('s-alarm-zone').textContent = `(new alarms: ${zl}, the main clock)`;
+    $('s-alarms').innerHTML = (S.alarms || []).map(a => `<div class="alarm-row" data-id="${a.id}">
+        <label class="check" title="On / off"><input type="checkbox" data-k="on" ${a.on ? 'checked' : ''}></label>
+        <input type="time" data-k="time" value="${a.time}"><span class="z">${alarmZoneLabel(a)}</span>
+        <input type="text" data-k="label" value="${(a.label || '').replace(/"/g, '&quot;')}" placeholder="Label (spoken)">
+        <select data-k="repeat">${Object.entries(REPEATS).map(([k, l]) => `<option value="${k}" ${a.repeat === k ? 'selected' : ''}>${l}</option>`).join('')}</select>
+        <button class="btn" data-del-alarm="${a.id}" title="Delete" style="padding:4px 9px">&#10005;</button></div>`).join('')
+      || '<span style="font-size:13px;font-weight:700;color:#fff">No alarms yet</span>';
+  }
   function fillSettings() {
     $('s-font').innerHTML = Object.entries(FONTS).map(([k, [l, f]]) => `<option value="${k}" style="font-family:${f.replace(/"/g, "'")}">${l}</option>`).join('');
     $('s-font').value = S.font;
@@ -531,7 +680,7 @@
     $('s-every').value = String(S.every); $('s-market').checked = S.market; $('s-local').checked = S.local;
     $('s-rate').value = S.rate; $('s-rate-val').textContent = `${Number(S.rate).toFixed(2)}x`;
     $('s-vol').value = S.vol ?? 1; $('s-vol-val').textContent = `${Math.round((S.vol ?? 1) * 100)}%`;
-    fillZones(); fillVoices(); fillMain();
+    fillZones(); fillVoices(); fillMain(); fillAlarms();
   }
   const set = p => { Object.assign(S, p); save(); applyLook(); fillSettings(); render(); };
 
@@ -551,7 +700,8 @@
   $('btn-compact-exit').onclick = () => set({ compact: false });
   // H compact, F full screen, V voice, T swap the main clock, Esc closes the panels (not while typing in a field); the corner button shows while the mouse moves
   document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') { $('settings').classList.remove('open'); $('help').classList.remove('open'); return; }
+    if (e.key === 'Escape') { if (ringing) { stopRing(); snooze = null; render(); return; } $('settings').classList.remove('open'); $('help').classList.remove('open'); return; }
+    if ((e.key === 's' || e.key === 'S') && ringing) { snoozeRing(); return; }
     if (e.ctrlKey || e.altKey || e.metaKey || /^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName)) return;
     if (e.key === 'h' || e.key === 'H') set({ compact: !S.compact });
     else if (e.key === 'f' || e.key === 'F') toggleFull();
@@ -574,6 +724,28 @@
   $('btn-test').onclick = () => { unlocked = true; say(spokenTime(new Date())); };
   $('btn-add-zone').onclick = () => { const z = $('s-add-zone').value; if (z && S.zones.length < MAX_ZONES) set({ zones: [...S.zones, z] }); };
   $('s-zones').onclick = e => { const z = e.target.dataset && e.target.dataset.del; if (z) set({ zones: S.zones.filter(x => x !== z) }); };
+  const editAlarm = (id, k, v) => { const a = (S.alarms || []).find(x => x.id === id); if (!a) return; a[k] = v; if (k !== 'label') delete fired[id]; save(); render(); };
+  $('s-alarms').addEventListener('change', e => {
+    const row = e.target.closest('.alarm-row'), k = e.target.dataset.k;
+    if (!row || !k) return;
+    editAlarm(row.dataset.id, k, k === 'on' ? e.target.checked : e.target.value);
+  });
+  $('s-alarms').addEventListener('click', e => {
+    const id = e.target.dataset && e.target.dataset.delAlarm;
+    if (id) { S.alarms = S.alarms.filter(a => a.id !== id); save(); fillAlarms(); render(); }
+  });
+  $('btn-add-alarm').onclick = () => {
+    unlocked = true;
+    const p = partsIn(new Date(Date.now() + 60 * 60000), mainTz());
+    S.alarms = [...(S.alarms || []), { id: 'a' + Date.now(), time: `${String(+p.hour % 24).padStart(2, '0')}:00`, label: '', repeat: 'once', on: true, zone: S.main }];
+    save(); fillAlarms(); render();
+  };
+  $('btn-test-alarm').onclick = () => { unlocked = true; chime(); setTimeout(() => say('F.O.C.U.S. alarm test'), 900); };
+  $('btn-alarms').onclick = () => { fillSettings(); $('settings').classList.add('open'); setTimeout(() => $('s-alarms-field').scrollIntoView({ block: 'center' }), 50); };
+  $('btn-snooze').onclick = snoozeRing;
+  // the badge: cancels a snooze, else opens the alarms
+  $('alarm-next').onclick = () => { if (snooze) { snooze = null; render(); } else $('btn-alarms').click(); };
+  $('btn-dismiss').onclick = () => { stopRing(); snooze = null; render(); };
   const toggleVoice = () => {
     unlocked = true;
     if (!S.every) { set({ every: 30, talk: true }); say('Talking clock on, every 30 minutes'); return; }
@@ -599,6 +771,7 @@
     if (unlocked) return;
     unlocked = true;
     try { speechSynthesis.speak(new SpeechSynthesisUtterance('')); } catch (e) { /* no speech engine */ }
+    try { actx = actx || new (window.AudioContext || window.webkitAudioContext)(); actx.resume(); } catch (e) { /* no audio */ }
     render();
   });
   try { speechSynthesis.onvoiceschanged = fillVoices; } catch (e) { /* no speech engine */ }

@@ -9,13 +9,14 @@
 - **World clocks**: up to 4 cities (plus New York when the main clock is not Eastern), with +1 / -1 when the day differs from the main clock.
 - **Compact mode** (▭ Compact, or the **H** key): hides the header and sizes the clock, date, session and world clocks to the window, so a small window in a corner of a big screen still shows the largest clock that fits. Move the mouse over it for the ☰ Header button (or press H again) to bring the header and Settings back. Remembered next time.
 - **Voice on / off**: the 🔊 / 🔇 icon under the clock (also in compact mode), the header 🔊 Talk button or the **V** key.
-- **Keys**: **H** compact on / off · **V** voice on / off · **T** swap the main clock · **F** full screen on / off (the ⛶ Full button turns into ↧ Min in full screen) · **Esc** closes Settings and Help. **? Help** explains it all on the page.
+- **Keys**: **H** compact on / off · **V** voice on / off · **T** swap the main clock · **S** snooze a ringing alarm · **F** full screen on / off (the ⛶ Full button turns into ↧ Min in full screen) · **Esc** closes Settings and Help. **? Help** explains it all on the page.
+- **Alarms** (⏰ Alarms, or ⚙ Settings → Alarms): as many as you like, each with a time, a spoken label and Repeat: Once, Every day, Weekdays or Market days (NYSE trading days, holidays skipped). The time is in the main clock's zone when you add it. When it rings: a chime and the voice ("F.O.C.U.S. alarm, 9:25. Pre-market check") every 30 seconds for up to 5 minutes, with Snooze 5 min (**S**) and Dismiss (**Esc**); the next alarm shows under the clock. The page has to be open (a background tab is fine).
 - **Talking clock**: says the time every 15, 30 or 60 minutes ("It's 10:30 AM Eastern"; tick "Also say my local time" to add yours: "..., 7:30 AM Pacific"), all day, or during market hours only if you tick it, in the voice, speed and volume you pick (the browser's built-in voices; Microsoft Edge has the most natural ones).
 
 ## Use it
 1. Double-click `start.bat` (or open `index.html` in Chrome or Edge).
 2. Click once anywhere on the page: browsers only let a page speak after a click.
-3. Settings (⚙): font, size, time format, date, session, world clocks, talking clock, voice, speed and volume. They are saved in this browser.
+3. Settings (⚙): font, size, time format, date, session, world clocks, talking clock, alarms, voice, speed and volume. They are saved in this browser.
 
 The fonts load from Google Fonts; offline, the clock falls back to the computer's own fonts and keeps working.
 
