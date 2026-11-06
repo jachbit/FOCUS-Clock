@@ -281,7 +281,7 @@
         and volume you pick (the voices installed on this device; Edge has the most natural ones).</td></tr>
       <tr><td>Alarms</td><td>&#9200; Alarms (or &#9881; Settings &#8594; Alarms): + Add alarm, then the time, a label ("Pre-market check") and
         Repeat: Once, Every day, Weekdays, or Market days (NYSE trading days: holidays skipped). The time is in the main clock's zone when you add
-        it (shown next to it, e.g. ET). When it rings: a chime and the voice ("F.O.C.U.S. alarm, 9:25. Pre-market check"), every 30 seconds for up to
+        it (shown next to it, e.g. ET). When it rings: a chime and the voice ("Alarm, 9:25. Pre-market check"), every 30 seconds for up to
         5 minutes, with &#128164; Snooze 5 min (<kbd>S</kbd>) and &#10003; Dismiss (<kbd>Esc</kbd>). The next alarm shows under the clock. The page
         has to be open (a background tab is fine; a closed browser or a sleeping phone cannot ring).</td></tr>
       <tr><td>Volume</td><td>&#9881; Settings &#8594; Volume, 0-100%: the voice only (100% = this device's own volume, it cannot go louder than
@@ -531,7 +531,7 @@
     ringing.last = now;
     chime();
     const [h, m] = ringing.a.time.split(':').map(Number);
-    setTimeout(() => say(`F.O.C.U.S. alarm, ${spokenClock(h, m)}. ${ringing ? ringing.a.label || '' : ''}`), 900);
+    setTimeout(() => say(`Alarm, ${spokenClock(h, m)}. ${ringing ? ringing.a.label || '' : ''}`), 900);
   }
   function stopRing() { ringing = null; $('alarm-banner').classList.remove('open'); try { speechSynthesis.cancel(); } catch (e) { /* none */ } }
   function snoozeRing() { if (!ringing) return; snooze = { a: ringing.a, at: Date.now() + 5 * 60000 }; stopRing(); render(); }
@@ -740,7 +740,7 @@
     S.alarms = [...(S.alarms || []), { id: 'a' + Date.now(), time: `${String(+p.hour % 24).padStart(2, '0')}:00`, label: '', repeat: 'once', on: true, zone: S.main }];
     save(); fillAlarms(); render();
   };
-  $('btn-test-alarm').onclick = () => { unlocked = true; chime(); setTimeout(() => say('F.O.C.U.S. alarm test'), 900); };
+  $('btn-test-alarm').onclick = () => { unlocked = true; chime(); setTimeout(() => say('Alarm test'), 900); };
   $('btn-alarms').onclick = () => { fillSettings(); $('settings').classList.add('open'); setTimeout(() => $('s-alarms-field').scrollIntoView({ block: 'center' }), 50); };
   $('btn-snooze').onclick = snoozeRing;
   // the badge: cancels a snooze, else opens the alarms
