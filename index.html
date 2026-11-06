@@ -280,8 +280,8 @@
       <tr><td>Talking clock</td><td>"It's 10:30 AM Eastern": every 15, 30 or 60 minutes, all day or during market hours only, in the voice, speed
         and volume you pick (the voices installed on this device; Edge has the most natural ones).</td></tr>
       <tr><td>Alarms</td><td>&#9200; Alarms (or &#9881; Settings &#8594; Alarms): + Add alarm, then the time, a label ("Pre-market check") and
-        Repeat: Once, Every day, Weekdays, or Market days (NYSE trading days: holidays skipped). The time is in the main clock's zone when you add
-        it (shown next to it, e.g. ET). When it rings: a chime and the voice ("Alarm, 9:25. Pre-market check"), every 30 seconds for up to
+        Repeat: Once, Every day, Weekdays, or Market days (NYSE trading days: holidays skipped). Pick ET or PT next to each alarm's time
+        (new alarms start on ET, or PT when the main clock is on Pacific time). When it rings: a chime and the voice ("Alarm, 9:25. Pre-market check"), every 30 seconds for up to
         5 minutes, with &#128164; Snooze 5 min (<kbd>S</kbd>) and &#10003; Dismiss (<kbd>Esc</kbd>). The next alarm shows under the clock. The page
         has to be open (a background tab is fine; a closed browser or a sleeping phone cannot ring).</td></tr>
       <tr><td>Volume</td><td>&#9881; Settings &#8594; Volume, 0-100%: the voice only (100% = this device's own volume, it cannot go louder than
@@ -478,7 +478,8 @@
     if (second === main) return first;
     return `${first}, ${t(second)} ${zoneSpoken(second, d, null)}`;
   }
-  // ── alarms (2026-11-05): each keeps the zone it was set in; Once / Every day / Weekdays / Market days (NYSE) ──
+  // ── alarms (2026-11-05): each has its own zone, picked on the alarm (ET or PT); Once / Every day / Weekdays / Market days (NYSE) ──
+  const ALARM_ZONES = { ny: 'ET', la: 'PT' };
   let actx = null;
   function chime() {
     try {
@@ -660,11 +661,11 @@
     $('s-local-label').textContent = eastern ? 'Also say my local time (after Eastern)' : 'Also say Eastern time (after the main clock)';
   }
   function fillAlarms() {
-    const zl = keyLabel(S.main, new Date());
-    $('s-alarm-zone').textContent = `(new alarms: ${zl}, the main clock)`;
+    $('s-alarm-zone').textContent = '(pick ET or PT on each alarm)';
     $('s-alarms').innerHTML = (S.alarms || []).map(a => `<div class="alarm-row" data-id="${a.id}">
         <label class="check" title="On / off"><input type="checkbox" data-k="on" ${a.on ? 'checked' : ''}></label>
-        <input type="time" data-k="time" value="${a.time}"><span class="z">${alarmZoneLabel(a)}</span>
+        <input type="time" data-k="time" value="${a.time}">
+        <select data-k="zone" title="Time zone of this alarm">${Object.entries(ALARM_ZONES).map(([k, l]) => `<option value="${k}" ${(a.zone || 'ny') === k ? 'selected' : ''}>${l}</option>`).join('')}${ALARM_ZONES[a.zone || 'ny'] ? '' : `<option value="${a.zone}" selected>${alarmZoneLabel(a)}</option>`}</select>
         <input type="text" data-k="label" value="${(a.label || '').replace(/"/g, '&quot;')}" placeholder="Label (spoken)">
         <select data-k="repeat">${Object.entries(REPEATS).map(([k, l]) => `<option value="${k}" ${a.repeat === k ? 'selected' : ''}>${l}</option>`).join('')}</select>
         <button class="btn" data-del-alarm="${a.id}" title="Delete" style="padding:4px 9px">&#10005;</button></div>`).join('')
@@ -736,8 +737,9 @@
   });
   $('btn-add-alarm').onclick = () => {
     unlocked = true;
-    const p = partsIn(new Date(Date.now() + 60 * 60000), mainTz());
-    S.alarms = [...(S.alarms || []), { id: 'a' + Date.now(), time: `${String(+p.hour % 24).padStart(2, '0')}:00`, label: '', repeat: 'once', on: true, zone: S.main }];
+    const zone = keyTz(S.main) === keyTz('la') ? 'la' : 'ny';   // ET unless the main clock is on Pacific time
+    const p = partsIn(new Date(Date.now() + 60 * 60000), keyTz(zone));
+    S.alarms = [...(S.alarms || []), { id: 'a' + Date.now(), time: `${String(+p.hour % 24).padStart(2, '0')}:00`, label: '', repeat: 'once', on: true, zone }];
     save(); fillAlarms(); render();
   };
   $('btn-test-alarm').onclick = () => { unlocked = true; chime(); setTimeout(() => say('Alarm test'), 900); };
