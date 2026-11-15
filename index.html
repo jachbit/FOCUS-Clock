@@ -110,7 +110,7 @@
   .alarm-row input[type=time], .alarm-row input[type=date] { color-scheme: dark; cursor: pointer; }   /* white calendar / clock icons */
   .alarm-row input[type=time], .alarm-row input[type=date], .alarm-row input[type=text] { background: var(--bg); color: #fff; border: 1px solid var(--border); border-radius: 6px;
     padding: 5px 7px; font-size: 13px; font-weight: 700; }
-  .alarm-row input[type=text] { flex: 1; min-width: 120px; }
+  .alarm-row input[type=text] { flex: 1 1 100%; order: 10; min-width: 0; }   /* label on its own full-width line under the settings */
   .alarm-row select { width: auto; }
   .alarm-row .z { font-size: 12px; font-weight: 800; color: var(--orange); }
   body.compact #alarm-next { font-size: max(12px, min(1.6vw, 3vh)); }
