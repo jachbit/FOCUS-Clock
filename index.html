@@ -107,6 +107,7 @@
   #alarm-banner .t { font-size: 44px; font-weight: 800; color: #fff; font-family: 'Roboto Mono', Consolas, monospace; }
   #alarm-banner .l { font-size: 20px; font-weight: 800; color: var(--yellow); }
   .alarm-row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; border: 1px solid var(--border); border-radius: 8px; padding: 6px 8px; }
+  .alarm-row input[type=time], .alarm-row input[type=date] { color-scheme: dark; cursor: pointer; }   /* white calendar / clock icons */
   .alarm-row input[type=time], .alarm-row input[type=date], .alarm-row input[type=text] { background: var(--bg); color: #fff; border: 1px solid var(--border); border-radius: 6px;
     padding: 5px 7px; font-size: 13px; font-weight: 700; }
   .alarm-row input[type=text] { flex: 1; min-width: 120px; }
@@ -505,6 +506,9 @@
   const shortDate = iso => { const [y, mo, d] = iso.split('-').map(Number); return new Date(Date.UTC(y, mo - 1, d)).toLocaleDateString('en-US', { timeZone: 'UTC', month: 'short', day: 'numeric' }); };
   const alarmTz = a => keyTz(a.zone || 'ny');
   const alarmZoneLabel = a => keyLabel(a.zone || 'ny', new Date());
+  // an alarm's "HH:MM" in the clock's 12 / 24-hour setting: "1:30 PM" or "13:30"
+  const alarmClock = a => { if (!S.h12) return a.time; const [h, m] = a.time.split(':').map(Number);
+    return fmt(new Date(Date.UTC(2000, 0, 1, h, m)), 'UTC', { hour: 'numeric', minute: '2-digit', hour12: true }); };
   const spokenClock = (h, m) => { const d = new Date(Date.UTC(2000, 0, 1, h, m)); return fmt(d, 'UTC', { hour: 'numeric', minute: '2-digit', hour12: true }).replace(':00 ', ' '); };
   // does the alarm ring on this date (its own zone's date)?
   function ringsOn(a, iso) {
@@ -529,7 +533,7 @@
   function ring(a, at) {
     ringing = { a, start: Date.now(), last: 0 };
     const ev = isDateAlarm(a);
-    $('alarm-time').textContent = `${ev ? shortDate(a.date) + ' ' : ''}${a.time} ${alarmZoneLabel(a)}`;
+    $('alarm-time').textContent = `${ev ? shortDate(a.date) + ' ' : ''}${alarmClock(a)} ${alarmZoneLabel(a)}`;
     $('alarm-label').textContent = (a.label || 'Alarm') + (ev && +a.before ? ` (in ${BEFORE_SPOKEN[a.before]})` : '');
     $('alarm-banner').classList.add('open');
     ringTick();
@@ -577,7 +581,7 @@
     for (const a of S.alarms || []) { if (!a.on) continue; const t = nextRing(a, now); if (t && (!best || t < best.t)) best = { a, t }; }
     if (!best) return '';
     const ev = isDateAlarm(best.a);
-    return `\u23f0 ${ev ? shortDate(best.a.date) + ' ' : ''}${best.a.time} ${alarmZoneLabel(best.a)}${best.a.label ? ' ' + best.a.label : ''} (${ev && +best.a.before ? 'reminder ' : ''}in ${inWords(best.t - now)})`;
+    return `\u23f0 ${ev ? shortDate(best.a.date) + ' ' : ''}${alarmClock(best.a)} ${alarmZoneLabel(best.a)}${best.a.label ? ' ' + best.a.label : ''} (${ev && +best.a.before ? 'reminder ' : ''}in ${inWords(best.t - now)})`;
   }
 
   let lastSaid = '';
@@ -760,6 +764,8 @@
     editAlarm(row.dataset.id, k, k === 'on' ? e.target.checked : e.target.value);
   });
   $('s-alarms').addEventListener('click', e => {
+    // click anywhere on a date / time box (not only its small icon) to open the calendar / time picker
+    if (e.target.matches('input[type=date], input[type=time]')) try { e.target.showPicker(); } catch (err) { /* older browser: icon only */ }
     const id = e.target.dataset && e.target.dataset.delAlarm;
     if (id) { S.alarms = S.alarms.filter(a => a.id !== id); save(); fillAlarms(); render(); }
   });
