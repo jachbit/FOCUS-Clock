@@ -107,7 +107,7 @@
   #alarm-banner .t { font-size: 44px; font-weight: 800; color: #fff; font-family: 'Roboto Mono', Consolas, monospace; }
   #alarm-banner .l { font-size: 20px; font-weight: 800; color: var(--yellow); }
   .alarm-row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; border: 1px solid var(--border); border-radius: 8px; padding: 6px 8px; }
-  .alarm-row input[type=time], .alarm-row input[type=text] { background: var(--bg); color: #fff; border: 1px solid var(--border); border-radius: 6px;
+  .alarm-row input[type=time], .alarm-row input[type=date], .alarm-row input[type=text] { background: var(--bg); color: #fff; border: 1px solid var(--border); border-radius: 6px;
     padding: 5px 7px; font-size: 13px; font-weight: 700; }
   .alarm-row input[type=text] { flex: 1; min-width: 120px; }
   .alarm-row select { width: auto; }
@@ -280,7 +280,9 @@
       <tr><td>Talking clock</td><td>"It's 10:30 AM Eastern": every 15, 30 or 60 minutes, all day or during market hours only, in the voice, speed
         and volume you pick (the voices installed on this device; Edge has the most natural ones).</td></tr>
       <tr><td>Alarms</td><td>&#9200; Alarms (or &#9881; Settings &#8594; Alarms): + Add alarm, then the time, a label ("Pre-market check") and
-        Repeat: Once, Every day, Weekdays, or Market days (NYSE trading days: holidays skipped). Pick ET or PT next to each alarm's time
+        Repeat: Once, Every day, Weekdays, Market days (NYSE trading days: holidays skipped), or On a date: pick the event's date, time and
+        when to remind you (at the time, 5 / 15 / 30 min, 1 / 2 hr or 1 day before), e.g. Nov 19, 4:00 PM ET, "Seminar", 1 hr before rings
+        at 3:00 PM ET ("Alarm. Seminar at 4 PM, in 1 hour"), then turns off; for two reminders add the event twice. Pick ET or PT next to each alarm's time
         (new alarms start on ET, or PT when the main clock is on Pacific time). When it rings: a chime and the voice ("Alarm, 9:25. Pre-market check"), every 30 seconds for up to
         5 minutes, with &#128164; Snooze 5 min (<kbd>S</kbd>) and &#10003; Dismiss (<kbd>Esc</kbd>). The next alarm shows under the clock. The page
         has to be open (a background tab is fine; a closed browser or a sleeping phone cannot ring).</td></tr>
@@ -494,7 +496,13 @@
       });
     } catch (e) { /* no audio in this browser */ }
   }
-  const REPEATS = { once: 'Once', daily: 'Every day', weekdays: 'Weekdays', market: 'Market days' };
+  const REPEATS = { once: 'Once', daily: 'Every day', weekdays: 'Weekdays', market: 'Market days', date: 'On a date' };
+  // "On a date" alarms (2026-11-15): an event date + time, ringing a set number of minutes before it, then off
+  const BEFORE = { 0: 'At the time', 5: '5 min before', 15: '15 min before', 30: '30 min before', 60: '1 hr before', 120: '2 hr before', 1440: '1 day before' };
+  const BEFORE_SPOKEN = { 5: '5 minutes', 15: '15 minutes', 30: '30 minutes', 60: '1 hour', 120: '2 hours', 1440: '1 day' };
+  const isDateAlarm = a => a.repeat === 'date' && /^\d{4}-\d\d-\d\d$/.test(a.date || '');
+  const dateRingAt = a => { const [h, m] = a.time.split(':').map(Number); return tzToEpoch(a.date, h, m, alarmTz(a)) - (+a.before || 0) * 60000; };
+  const shortDate = iso => { const [y, mo, d] = iso.split('-').map(Number); return new Date(Date.UTC(y, mo - 1, d)).toLocaleDateString('en-US', { timeZone: 'UTC', month: 'short', day: 'numeric' }); };
   const alarmTz = a => keyTz(a.zone || 'ny');
   const alarmZoneLabel = a => keyLabel(a.zone || 'ny', new Date());
   const spokenClock = (h, m) => { const d = new Date(Date.UTC(2000, 0, 1, h, m)); return fmt(d, 'UTC', { hour: 'numeric', minute: '2-digit', hour12: true }).replace(':00 ', ' '); };
@@ -506,6 +514,7 @@
   }
   // the next time it rings (epoch ms), within 10 days
   function nextRing(a, now) {
+    if (a.repeat === 'date') return isDateAlarm(a) && dateRingAt(a) > now ? dateRingAt(a) : null;
     const tz = alarmTz(a), [h, m] = a.time.split(':').map(Number);
     for (let k = 0; k < 10; k++) {
       const iso = isoIn(new Date(now + k * 86400000), tz);
@@ -519,8 +528,9 @@
   let ringing = null, snooze = null;
   function ring(a, at) {
     ringing = { a, start: Date.now(), last: 0 };
-    $('alarm-time').textContent = `${a.time} ${alarmZoneLabel(a)}`;
-    $('alarm-label').textContent = a.label || 'Alarm';
+    const ev = isDateAlarm(a);
+    $('alarm-time').textContent = `${ev ? shortDate(a.date) + ' ' : ''}${a.time} ${alarmZoneLabel(a)}`;
+    $('alarm-label').textContent = (a.label || 'Alarm') + (ev && +a.before ? ` (in ${BEFORE_SPOKEN[a.before]})` : '');
     $('alarm-banner').classList.add('open');
     ringTick();
   }
@@ -532,7 +542,9 @@
     ringing.last = now;
     chime();
     const [h, m] = ringing.a.time.split(':').map(Number);
-    setTimeout(() => say(`Alarm, ${spokenClock(h, m)}. ${ringing ? ringing.a.label || '' : ''}`), 900);
+    const a = ringing.a, early = isDateAlarm(a) && +a.before;
+    setTimeout(() => say(early ? `Alarm. ${a.label || 'Event'} at ${spokenClock(h, m)}, in ${BEFORE_SPOKEN[a.before]}.`
+                               : `Alarm, ${spokenClock(h, m)}. ${ringing ? ringing.a.label || '' : ''}`), 900);
   }
   function stopRing() { ringing = null; $('alarm-banner').classList.remove('open'); try { speechSynthesis.cancel(); } catch (e) { /* none */ } }
   function snoozeRing() { if (!ringing) return; snooze = { a: ringing.a, at: Date.now() + 5 * 60000 }; stopRing(); render(); }
@@ -541,6 +553,13 @@
     if (snooze && now.getTime() >= snooze.at) { const a = snooze.a; snooze = null; ring(a); return; }
     for (const a of S.alarms || []) {
       if (!a.on || !/^\d\d:\d\d$/.test(a.time || '')) continue;
+      if (a.repeat === 'date') {
+        if (!isDateAlarm(a)) continue;
+        const t = dateRingAt(a), n = now.getTime();
+        if (n < t || n >= t + 60000 || fired[a.id] === a.date) continue;
+        fired[a.id] = a.date; a.on = false; save(); fillAlarms(); ring(a);
+        return;
+      }
       const tz = alarmTz(a), p = partsIn(now, tz), iso = isoIn(now, tz);
       if (`${String(+p.hour % 24).padStart(2, '0')}:${p.minute}` !== a.time || fired[a.id] === iso || !ringsOn(a, iso)) continue;
       fired[a.id] = iso;
@@ -557,7 +576,8 @@
     let best = null;
     for (const a of S.alarms || []) { if (!a.on) continue; const t = nextRing(a, now); if (t && (!best || t < best.t)) best = { a, t }; }
     if (!best) return '';
-    return `\u23f0 ${best.a.time} ${alarmZoneLabel(best.a)}${best.a.label ? ' ' + best.a.label : ''} (in ${inWords(best.t - now)})`;
+    const ev = isDateAlarm(best.a);
+    return `\u23f0 ${ev ? shortDate(best.a.date) + ' ' : ''}${best.a.time} ${alarmZoneLabel(best.a)}${best.a.label ? ' ' + best.a.label : ''} (${ev && +best.a.before ? 'reminder ' : ''}in ${inWords(best.t - now)})`;
   }
 
   let lastSaid = '';
@@ -668,6 +688,8 @@
         <select data-k="zone" title="Time zone of this alarm">${Object.entries(ALARM_ZONES).map(([k, l]) => `<option value="${k}" ${(a.zone || 'ny') === k ? 'selected' : ''}>${l}</option>`).join('')}${ALARM_ZONES[a.zone || 'ny'] ? '' : `<option value="${a.zone}" selected>${alarmZoneLabel(a)}</option>`}</select>
         <input type="text" data-k="label" value="${(a.label || '').replace(/"/g, '&quot;')}" placeholder="Label (spoken)">
         <select data-k="repeat">${Object.entries(REPEATS).map(([k, l]) => `<option value="${k}" ${a.repeat === k ? 'selected' : ''}>${l}</option>`).join('')}</select>
+        ${a.repeat === 'date' ? `<input type="date" data-k="date" value="${a.date || ''}" title="Event date">
+        <select data-k="before" title="When to remind you">${Object.entries(BEFORE).map(([k, l]) => `<option value="${k}" ${String(a.before || 0) === k ? 'selected' : ''}>${l}</option>`).join('')}</select>` : ''}
         <button class="btn" data-del-alarm="${a.id}" title="Delete" style="padding:4px 9px">&#10005;</button></div>`).join('')
       || '<span style="font-size:13px;font-weight:700;color:#fff">No alarms yet</span>';
   }
@@ -725,7 +747,13 @@
   $('btn-test').onclick = () => { unlocked = true; say(spokenTime(new Date())); };
   $('btn-add-zone').onclick = () => { const z = $('s-add-zone').value; if (z && S.zones.length < MAX_ZONES) set({ zones: [...S.zones, z] }); };
   $('s-zones').onclick = e => { const z = e.target.dataset && e.target.dataset.del; if (z) set({ zones: S.zones.filter(x => x !== z) }); };
-  const editAlarm = (id, k, v) => { const a = (S.alarms || []).find(x => x.id === id); if (!a) return; a[k] = v; if (k !== 'label') delete fired[id]; save(); render(); };
+  const editAlarm = (id, k, v) => {
+    const a = (S.alarms || []).find(x => x.id === id); if (!a) return;
+    a[k] = k === 'before' ? +v : v;
+    if (k === 'repeat' && v === 'date' && !a.date) { a.date = isoIn(new Date(), alarmTz(a)); a.before = a.before || 0; }
+    if (k !== 'label') delete fired[id];
+    save(); if (k === 'repeat') fillAlarms(); render();
+  };
   $('s-alarms').addEventListener('change', e => {
     const row = e.target.closest('.alarm-row'), k = e.target.dataset.k;
     if (!row || !k) return;
