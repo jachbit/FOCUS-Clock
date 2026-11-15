@@ -259,6 +259,7 @@
     <div class="field" id="s-alarms-field"><label>&#9200; Alarms <span id="s-alarm-zone" style="color:#fff;text-transform:none"></span></label>
       <div id="s-alarms" style="display:flex;flex-direction:column;gap:6px"></div>
       <div class="row"><button class="btn" id="btn-add-alarm">+ Add alarm</button><button class="btn" id="btn-test-alarm">&#9654; Test the alarm</button></div>
+      <div class="row"><button class="btn" id="btn-export-alarms" title="Save your alarms as a CSV file to share">&#8681; Export CSV</button><button class="btn" id="btn-import-alarms" title="Add alarms from a CSV file (yours or someone else's)">&#8679; Import CSV</button><input type="file" id="alarm-file" accept=".csv,text/csv" style="display:none"></div>
       <div style="font-size:12px;font-weight:700;color:#fff">The chime and the spoken label use the voice, speed and volume above. The page has to be open (a background tab is fine).</div>
     </div>
   </div>
@@ -283,7 +284,8 @@
       <tr><td>Alarms</td><td>&#9200; Alarms (or &#9881; Settings &#8594; Alarms): + Add alarm, then the time, a label ("Pre-market check") and
         Repeat: Once, Every day, Weekdays, Market days (NYSE trading days: holidays skipped), or On a date: pick the event's date, time and
         when to remind you (at the time, 5 / 15 / 30 min, 1 / 2 hr or 1 day before), e.g. Nov 19, 4:00 PM ET, "Seminar", 1 hr before rings
-        at 3:00 PM ET ("Alarm. Seminar at 4 PM, in 1 hour"), then turns off; for two reminders add the event twice. Pick ET or PT next to each alarm's time
+        at 3:00 PM ET ("Alarm. Seminar at 4 PM, in 1 hour"), then turns off; for two reminders add the event twice. &#8681; Export CSV saves
+        your alarms to a file to share; &#8679; Import CSV adds the alarms from such a file to yours (ones you already have are skipped). Pick ET or PT next to each alarm's time
         (new alarms start on ET, or PT when the main clock is on Pacific time). When it rings: a chime and the voice ("Alarm, 9:25. Pre-market check"), every 30 seconds for up to
         5 minutes, with &#128164; Snooze 5 min (<kbd>S</kbd>) and &#10003; Dismiss (<kbd>Esc</kbd>). The next alarm shows under the clock. The page
         has to be open (a background tab is fine; a closed browser or a sleeping phone cannot ring).</td></tr>
@@ -775,6 +777,55 @@
     const p = partsIn(new Date(Date.now() + 60 * 60000), keyTz(zone));
     S.alarms = [...(S.alarms || []), { id: 'a' + Date.now(), time: `${String(+p.hour % 24).padStart(2, '0')}:00`, label: '', repeat: 'once', on: true, zone }];
     save(); fillAlarms(); render();
+  };
+  // ── alarm CSV export / import (2026-11-15): share alarm settings; import adds, skipping alarms already there ──
+  const CSV_COLS = ['On', 'Time', 'Zone', 'Label', 'Repeat', 'Date', 'Remind before (min)'];
+  const csvCell = v => /[",\r\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v);
+  function parseCsv(text) {
+    const rows = [[]]; let cell = '', q = false;
+    for (let i = 0; i < text.length; i++) {
+      const c = text[i];
+      if (q) { if (c === '"' && text[i + 1] === '"') { cell += '"'; i++; } else if (c === '"') q = false; else cell += c; }
+      else if (c === '"') q = true;
+      else if (c === ',') { rows[rows.length - 1].push(cell); cell = ''; }
+      else if (c === '\n') { rows[rows.length - 1].push(cell.replace(/\r$/, '')); cell = ''; rows.push([]); }
+      else cell += c;
+    }
+    rows[rows.length - 1].push(cell.replace(/\r$/, ''));
+    return rows.filter(r => r.some(x => x.trim()));
+  }
+  $('btn-export-alarms').onclick = () => {
+    const rows = (S.alarms || []).map(a => [a.on ? 'yes' : 'no', a.time, ALARM_ZONES[a.zone || 'ny'] || 'ET', a.label || '', a.repeat || 'once',
+                                            a.repeat === 'date' ? a.date || '' : '', a.repeat === 'date' ? +a.before || 0 : '']);
+    if (!rows.length) { alert('No alarms to export yet.'); return; }
+    const csv = [CSV_COLS, ...rows].map(r => r.map(csvCell).join(',')).join('\r\n') + '\r\n';
+    const n = new Date(), pad = x => String(x).padStart(2, '0');
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+    link.download = `FOCUS_Clock_Alarms_${n.getFullYear()}${pad(n.getMonth() + 1)}${pad(n.getDate())}_${pad(n.getHours())}${pad(n.getMinutes())}${pad(n.getSeconds())}.csv`;
+    link.click(); setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+  };
+  $('btn-import-alarms').onclick = () => { $('alarm-file').value = ''; $('alarm-file').click(); };
+  $('alarm-file').onchange = async e => {
+    const file = e.target.files[0]; if (!file) return;
+    const rows = parseCsv(await file.text()), head = (rows.shift() || []).map(h => h.trim().toLowerCase());
+    const col = name => head.findIndex(h => h.startsWith(name));
+    const iOn = col('on'), iTime = col('time'), iZone = col('zone'), iLabel = col('label'), iRep = col('repeat'), iDate = col('date'), iBefore = col('remind');
+    if (iTime < 0) { alert('This file has no Time column: it is not a F.O.C.U.S. Clock alarm file.'); return; }
+    const zoneKey = { et: 'ny', pt: 'la' }, key = a => [a.time, a.zone, a.label, a.repeat, a.date || '', +a.before || 0].join('|');
+    const have = new Set((S.alarms || []).map(key)), added = []; let skipped = 0, bad = 0;
+    rows.forEach((r, n) => {
+      const get = i => (i >= 0 ? r[i] || '' : '').trim();
+      let time = get(iTime); if (/^\d:\d\d$/.test(time)) time = '0' + time;
+      const repeat = REPEATS[get(iRep).toLowerCase()] ? get(iRep).toLowerCase() : 'once';
+      const a = { id: `a${Date.now()}${n}`, time, label: get(iLabel), repeat, on: !/^(no|false|0|off)$/i.test(get(iOn)), zone: zoneKey[get(iZone).toLowerCase()] || 'ny' };
+      if (repeat === 'date') { a.date = get(iDate); a.before = BEFORE[+get(iBefore)] ? +get(iBefore) : 0; }
+      if (!/^\d\d:\d\d$/.test(time) || (repeat === 'date' && !/^\d{4}-\d\d-\d\d$/.test(a.date))) { bad++; return; }
+      if (have.has(key(a))) { skipped++; return; }
+      have.add(key(a)); added.push(a);
+    });
+    S.alarms = [...(S.alarms || []), ...added]; save(); fillAlarms(); render();
+    alert(`Imported ${added.length} alarm${added.length === 1 ? '' : 's'}` + (skipped ? `, skipped ${skipped} you already have` : '') + (bad ? `, skipped ${bad} unreadable row${bad === 1 ? '' : 's'}` : '') + '.');
   };
   $('btn-test-alarm').onclick = () => { unlocked = true; chime(); setTimeout(() => say('Alarm test'), 900); };
   $('btn-alarms').onclick = () => { fillSettings(); $('settings').classList.add('open'); setTimeout(() => $('s-alarms-field').scrollIntoView({ block: 'center' }), 50); };
